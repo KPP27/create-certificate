@@ -18,8 +18,10 @@
     <h2>Генератор сертификатов (шрифт Gilroy Italic)</h2>
     <label>ФИО студента:</label>
     <input type="text" id="name" placeholder="Иванов Иван">
+
     <label>Дата выдачи:</label>
-    <input type="text" id="date" placeholder="25.04.2026">
+    <input type="date" id="date" style="display: block; width: 100%;">
+
     <button id="gen">Скачать PDF</button>
     <div id="error" class="error"></div>
     <div id="info" class="info"></div>
@@ -32,21 +34,27 @@
             const IMAGE_URL = 'template.jpg';                // ваш фоновый рисунок
             const FONT_URL = 'gilroy-regular-italic.ttf';    // файл шрифта
 
-            // === ПОЗИЦИОНИРОВАНИЕ ТЕКСТА (коэффициенты от 0 до 1) ===
-            // 0 = левый/верхний край, 0.5 = центр, 1 = правый/нижний край
-            const NAME_X_FACTOR = 0.15;       // смещение имени по X (0..1). 0.5 = по центру
-            const NAME_Y_FACTOR = 0.515;      // смещение имени по Y. 0.45 = чуть выше середины
+            // Позиционирование текста (коэффициенты от 0 до 1)
+            const NAME_X_FACTOR = 0.15;       // смещение имени по X
+            const NAME_Y_FACTOR = 0.515;      // смещение имени по Y
             const DATE_X_FACTOR = 0.25;       // смещение даты по X
-            const DATE_Y_FACTOR = 0.2;       // смещение даты по Y (ниже имени)
+            const DATE_Y_FACTOR = 0.2;       // смещение даты по Y
 
-            // === РАЗМЕР ШРИФТА ===
-            const NAME_FONT_SIZE = 43;        // размер шрифта для имени (чем больше, тем крупнее)
-            const DATE_FONT_SIZE = 28;        // размер шрифта для даты
+            // Размер шрифта
+            const NAME_FONT_SIZE = 44;
+            const DATE_FONT_SIZE = 28;
 
-            // === ЦВЕТ ТЕКСТА (RGB от 0 до 1) ===
-            const TEXT_COLOR = { r: 0, g: 0, b: 0 }; // чёрный
+            // Цвет текста (RGB от 0 до 1)
+            const TEXT_COLOR = { r: 0, g: 0, b: 0 };
+            // ----------------------------------------------
 
-            // =================================================
+            // Устанавливаем сегодняшнюю дату в поле date (формат YYYY-MM-DD)
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const todayFormatted = `${yyyy}-${mm}-${dd}`;
+            document.getElementById('date').value = todayFormatted;
 
             let imageBytes, fontBytes;
 
@@ -65,7 +73,7 @@
                 return;
             }
 
-            // Функция простой транслитерации (русские буквы -> латиница)
+            // Функция транслитерации (русские буквы -> латиница)
             function transliterate(name) {
                 const map = {
                     'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
@@ -73,14 +81,24 @@
                     'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
                     'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
                     'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
-                    ' ': '_', '\\w':''
+                    ' ': '_'
                 };
                 return name.toLowerCase().split('').map(c => map[c] || (/[a-z0-9]/i.test(c) ? c : '')).join('');
             }
 
+            // Преобразование даты из формата YYYY-MM-DD в формат DD.MM.YYYY для отображения на сертификате
+            function formatDateForCertificate(dateStr) {
+                if (!dateStr) return new Date().toLocaleDateString('ru-RU');
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    return `${parts[2]}.${parts[1]}.${parts[0]}`;
+                }
+                return dateStr;
+            }
+
             document.getElementById('gen').onclick = async () => {
                 const studentName = document.getElementById('name').value.trim();
-                const issueDate = document.getElementById('date').value.trim();
+                let rawDate = document.getElementById('date').value;
                 if (!studentName) {
                     document.getElementById('error').innerText = 'Введите имя студента';
                     return;
@@ -92,7 +110,6 @@
                     const pdfDoc = await PDFDocument.create();
                     pdfDoc.registerFontkit(fontkit);
 
-                    // Встраиваем изображение
                     let image;
                     try {
                         image = await pdfDoc.embedPng(imageBytes);
@@ -100,19 +117,17 @@
                         image = await pdfDoc.embedJpg(imageBytes);
                     }
 
-                    // Встраиваем шрифт
                     const customFont = await pdfDoc.embedFont(fontBytes);
-
                     const page = pdfDoc.addPage([image.width, image.height]);
                     page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
 
-                    // Координаты из настроек
+                    // Позиции
                     const nameX = image.width * NAME_X_FACTOR;
                     const nameY = image.height * NAME_Y_FACTOR;
                     const dateX = image.width * DATE_X_FACTOR;
                     const dateY = image.height * DATE_Y_FACTOR;
 
-                    // Имя – центрирование по X
+                    // Имя
                     const nameWidth = customFont.widthOfTextAtSize(studentName, NAME_FONT_SIZE);
                     page.drawText(studentName, {
                         x: nameX - nameWidth / 2,
@@ -122,10 +137,10 @@
                         color: rgb(TEXT_COLOR.r, TEXT_COLOR.g, TEXT_COLOR.b),
                     });
 
-                    // Дата – центрирование по X
-                    const dateText = issueDate || new Date().toLocaleDateString('ru-RU');
-                    const dateWidth = customFont.widthOfTextAtSize(dateText, DATE_FONT_SIZE);
-                    page.drawText(dateText, {
+                    // Дата
+                    let displayDate = rawDate ? formatDateForCertificate(rawDate) : formatDateForCertificate(todayFormatted);
+                    const dateWidth = customFont.widthOfTextAtSize(displayDate, DATE_FONT_SIZE);
+                    page.drawText(displayDate, {
                         x: dateX - dateWidth / 2,
                         y: dateY,
                         size: DATE_FONT_SIZE,
@@ -138,7 +153,6 @@
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
                     
-                    // Формируем имя файла: транслитерация + "Сертификат.pdf"
                     const latinName = transliterate(studentName).replace(/[^a-z0-9_]/gi, '_');
                     const fileName = `${latinName}_Сертификат.pdf`;
                     link.download = fileName;
