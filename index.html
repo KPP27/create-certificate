@@ -1,52 +1,133 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset="UTF-8"><title>Сертификат</title>
-<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-<style>body{font-family:sans-serif;padding:2rem;}</style>
+<head>
+    <meta charset="UTF-8">
+    <title>Сертификат – Gilroy Italic</title>
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <!-- Подключаем fontkit для поддержки кастомных TTF/OTF шрифтов -->
+    <script src="https://unpkg.com/@pdf-lib/fontkit@1.0.0/dist/fontkit.umd.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 2rem; max-width: 500px; margin: 0 auto; }
+        input, button { display: block; width: 100%; margin: 10px 0; padding: 10px; font-size: 1rem; }
+        button { background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        button:hover { background: #2563eb; }
+        .error { color: red; margin-top: 10px; }
+    </style>
 </head>
 <body>
-<h2>Генератор сертификатов</h2>
-<label>ФИО: <input type="text" id="name"></label><br>
-<label>Дата: <input type="text" id="date"></label><br>
-<button id="gen">Скачать PDF</button>
-<script>
-(async function() {
-  const { PDFDocument, rgb, StandardFonts } = PDFLib;
-  // Загружаем изображение из файла (положите template.jpg рядом с index.html)
-  const imgResp = await fetch('template.jpg');
-  const imgBlob = await imgResp.blob();
-  const imgBytes = await imgBlob.arrayBuffer();
+    <h2>Генератор сертификатов</h2>
+    <label>ФИО студента:</label>
+    <input type="text" id="name" placeholder="Иванов Иван">
+    <label>Дата выдачи:</label>
+    <input type="text" id="date" placeholder="25.04.2026">
+    <button id="gen">Скачать PDF (Gilroy Italic)</button>
+    <div id="error" class="error"></div>
 
-  document.getElementById('gen').onclick = async () => {
-    const name = document.getElementById('name').value.trim() || 'Имя Фамилия';
-    const date = document.getElementById('date').value.trim() || new Date().toLocaleDateString('ru-RU');
-    const pdfDoc = await PDFDocument.create();
-    let image;
-    try {
-      image = await pdfDoc.embedPng(imgBytes);
-    } catch(e) {
-      image = await pdfDoc.embedJpg(imgBytes);
-    }
-    const page = pdfDoc.addPage([image.width, image.height]);
-    page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const nameX = image.width * 0.5;
-    const nameY = image.height * 0.45;
-    const dateX = image.width * 0.5;
-    const dateY = image.height * 0.6;
-    const nameWidth = font.widthOfTextAtSize(name, 42);
-    const dateWidth = font.widthOfTextAtSize(date, 28);
-    page.drawText(name, { x: nameX - nameWidth/2, y: nameY, size: 42, font, color: rgb(0,0,0) });
-    page.drawText(date, { x: dateX - dateWidth/2, y: dateY, size: 28, font, color: rgb(0,0,0) });
-    const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], {type:'application/pdf'});
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${name}_certificate.pdf`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
-})();
-</script>
+    <script>
+        (async function() {
+            const { PDFDocument, rgb } = PDFLib;
+
+            // --- НАСТРОЙКИ (подберите под свой макет) ---
+            const IMAGE_URL = 'template.jpg';                // ваш JPG-шаблон
+            const FONT_URL = 'gilroy-regular-italic.ttf';    // имя вашего TTF-шрифта
+            // Позиции текста (коэффициенты от 0 до 1)
+            const NAME_X_FACTOR = 0.5;      // 0.5 = по центру по горизонтали
+            const NAME_Y_FACTOR = 0.45;     // 0.45 = 45% высоты от верхнего края
+            const DATE_X_FACTOR = 0.5;
+            const DATE_Y_FACTOR = 0.6;
+            const NAME_FONT_SIZE = 42;      // размер шрифта для имени
+            const DATE_FONT_SIZE = 28;      // размер шрифта для даты
+            const TEXT_COLOR = { r: 0, g: 0, b: 0 }; // чёрный
+            // --------------------------------------------
+
+            // Загружаем изображение и шрифт
+            let imageBytes, fontBytes;
+            try {
+                const imgResp = await fetch(IMAGE_URL);
+                if (!imgResp.ok) throw new Error(`Не удалось загрузить изображение: ${IMAGE_URL}`);
+                imageBytes = await imgResp.arrayBuffer();
+
+                const fontResp = await fetch(FONT_URL);
+                if (!fontResp.ok) throw new Error(`Не удалось загрузить шрифт: ${FONT_URL}`);
+                fontBytes = await fontResp.arrayBuffer();
+            } catch (err) {
+                document.getElementById('error').innerText = err.message;
+                console.error(err);
+                return;
+            }
+
+            document.getElementById('gen').onclick = async () => {
+                const studentName = document.getElementById('name').value.trim();
+                const issueDate = document.getElementById('date').value.trim();
+                if (!studentName) {
+                    document.getElementById('error').innerText = 'Введите имя студента';
+                    return;
+                }
+                document.getElementById('error').innerText = '';
+
+                // Создаём PDF
+                const pdfDoc = await PDFDocument.create();
+                
+                // Регистрируем fontkit для работы с кастомными шрифтами
+                pdfDoc.registerFontkit(fontkit);
+
+                // Встраиваем изображение
+                let image;
+                try {
+                    image = await pdfDoc.embedPng(imageBytes);
+                } catch (e) {
+                    image = await pdfDoc.embedJpg(imageBytes);
+                }
+
+                // Встраиваем ваш TTF-шрифт
+                let customFont;
+                try {
+                    customFont = await pdfDoc.embedFont(fontBytes);
+                } catch (e) {
+                    console.warn('Не удалось встроить шрифт, используем стандартный Helvetica', e);
+                    customFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+                }
+
+                const page = pdfDoc.addPage([image.width, image.height]);
+                page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+
+                // Вычисляем координаты
+                const nameX = image.width * NAME_X_FACTOR;
+                const nameY = image.height * NAME_Y_FACTOR;
+                const dateX = image.width * DATE_X_FACTOR;
+                const dateY = image.height * DATE_Y_FACTOR;
+
+                // Рисуем имя (с центрированием)
+                const nameWidth = customFont.widthOfTextAtSize(studentName, NAME_FONT_SIZE);
+                page.drawText(studentName, {
+                    x: nameX - nameWidth / 2,
+                    y: nameY,
+                    size: NAME_FONT_SIZE,
+                    font: customFont,
+                    color: rgb(TEXT_COLOR.r, TEXT_COLOR.g, TEXT_COLOR.b),
+                });
+
+                // Рисуем дату (с центрированием)
+                const dateText = issueDate || new Date().toLocaleDateString('ru-RU');
+                const dateWidth = customFont.widthOfTextAtSize(dateText, DATE_FONT_SIZE);
+                page.drawText(dateText, {
+                    x: dateX - dateWidth / 2,
+                    y: dateY,
+                    size: DATE_FONT_SIZE,
+                    font: customFont,
+                    color: rgb(TEXT_COLOR.r, TEXT_COLOR.g, TEXT_COLOR.b),
+                });
+
+                // Сохраняем и скачиваем PDF
+                const pdfBytes = await pdfDoc.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `${studentName.replace(/[^a-zа-яё\s]/gi, '')}_certificate.pdf`;
+                link.click();
+                URL.revokeObjectURL(link.href);
+            };
+        })();
+    </script>
 </body>
 </html>
