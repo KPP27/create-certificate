@@ -28,7 +28,7 @@
 
     <script>
         (async function() {
-            const { PDFDocument, rgb } = PDFLib;
+            const { PDFDocument, rgb, StandardFonts } = PDFLib;
 
             // ---------- НАСТРОЙКИ (меняйте здесь) ----------
             const IMAGE_URL = 'template.jpg';                // ваш фоновый рисунок
@@ -36,8 +36,8 @@
 
             // Позиционирование текста (коэффициенты от 0 до 1)
             const NAME_X_FACTOR = 0.155;       // смещение имени по X
-            const NAME_Y_FACTOR = 0.519;      // смещение имени по Y
-            const DATE_X_FACTOR = 0.28;       // смещение даты по X
+            const NAME_Y_FACTOR = 0.519;       // смещение имени по Y
+            const DATE_X_FACTOR = 0.28;        // смещение даты по X
             const DATE_Y_FACTOR = 0.142;       // смещение даты по Y
 
             // Размер шрифта
@@ -119,7 +119,15 @@
                         image = await pdfDoc.embedJpg(imageBytes);
                     }
 
-                    const customFont = await pdfDoc.embedFont(fontBytes);
+                    // Встраиваем кастомный шрифт, если не получится – используем стандартный Helvetica
+                    let customFont;
+                    try {
+                        customFont = await pdfDoc.embedFont(fontBytes);
+                    } catch (e) {
+                        console.warn('Не удалось загрузить кастомный шрифт, используем Helvetica', e);
+                        customFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+                    }
+
                     const page = pdfDoc.addPage([image.width, image.height]);
                     page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
 
@@ -136,7 +144,7 @@
                         y: nameY,
                         size: NAME_FONT_SIZE,
                         font: customFont,
-                        color: rgb(TEXT_COLOR.r, TEXT_COLOR.g, TEXT_COLOR.b),
+                        color: rgb(NAME_TEXT_COLOR.r, NAME_TEXT_COLOR.g, NAME_TEXT_COLOR.b),
                     });
 
                     // Дата
@@ -147,7 +155,7 @@
                         y: dateY,
                         size: DATE_FONT_SIZE,
                         font: customFont,
-                        color: rgb(TEXT_COLOR.r, TEXT_COLOR.g, TEXT_COLOR.b),
+                        color: rgb(DATE_TEXT_COLOR.r, DATE_TEXT_COLOR.g, DATE_TEXT_COLOR.b),
                     });
 
                     const pdfBytes = await pdfDoc.save();
