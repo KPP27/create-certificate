@@ -2,180 +2,324 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Сертификат – Gilroy Italic</title>
+    <title>Сертифікат – Gilroy Italic</title>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://unpkg.com/@pdf-lib/fontkit@1.0.0/dist/fontkit.umd.min.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 2rem; max-width: 500px; margin: 0 auto; }
-        input, button { display: block; width: 100%; margin: 10px 0; padding: 10px; font-size: 1rem; }
-        button { background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; }
-        button:hover { background: #2563eb; }
-        .error { color: red; margin-top: 10px; }
-        .info { color: #2563eb; margin-top: 10px; font-size: 0.9rem; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 32px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 32px 28px;
+            max-width: 500px;
+            width: 100%;
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+        }
+
+        h2 {
+            font-size: 1.9rem;
+            font-weight: 600;
+            background: linear-gradient(120deg, #1e293b, #3b82f6);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .sub {
+            color: #475569;
+            margin-bottom: 28px;
+            border-left: 4px solid #3b82f6;
+            padding-left: 14px;
+            font-size: 0.95rem;
+        }
+
+        label {
+            font-weight: 600;
+            display: block;
+            margin: 20px 0 8px 0;
+            color: #0f172a;
+            font-size: 0.9rem;
+            letter-spacing: 0.3px;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 1rem;
+            border-radius: 24px;
+            transition: all 0.2s ease;
+        }
+
+        input {
+            border: 1px solid #cbd5e1;
+            background: white;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+
+        button {
+            background: linear-gradient(95deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 28px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        button:hover {
+            background: linear-gradient(95deg, #2563eb, #1d4ed8);
+            transform: scale(1.01);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .info {
+            background: #f1f5f9;
+            border-radius: 20px;
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            color: #1e293b;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .error {
+            color: #dc2626;
+            margin-top: 12px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 28px;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 16px;
+        }
     </style>
 </head>
 <body>
-    <h2>Генератор сертификатов (шрифт Gilroy Italic)</h2>
-    <label>ФИО студента:</label>
-    <input type="text" id="name" placeholder="Иванов Иван">
+<div class="card">
+    <h2>🎓 Генератор сертифікатів</h2>
+    <div class="sub">шрифт Gilroy Italic • оберіть дату</div>
 
-    <label>Дата выдачи:</label>
-    <input type="date" id="date" style="display: block; width: 100%;">
+    <label>📛 ПІБ студента / студентки</label>
+    <input type="text" id="name" placeholder="Іваненко Іван" autocomplete="off">
 
-    <button id="gen">Скачать PDF</button>
+    <label>📅 Дата видачі</label>
+    <input type="date" id="date">
+
+    <button id="gen">✨ Завантажити PDF-сертифікат</button>
+
+    <div id="info" class="info">✅ Шаблон і шрифт готові</div>
     <div id="error" class="error"></div>
-    <div id="info" class="info"></div>
+    <footer>
+        PDF створюється у вашому браузері.<br>
+        Дані не передаються на сервер.
+    </footer>
+</div>
 
-    <script>
-        (async function() {
-            const { PDFDocument, rgb, StandardFonts } = PDFLib;
+<script>
+    (async function() {
+        const { PDFDocument, rgb, StandardFonts } = PDFLib;
 
-            // ---------- НАСТРОЙКИ (меняйте здесь) ----------
-            const IMAGE_URL = 'template.jpg';                // ваш фоновый рисунок
-            const FONT_URL = 'gilroy-regular-italic.ttf';    // файл шрифта
+        // ---------- НАСТРОЙКИ (сохранены ваши значения) ----------
+        const IMAGE_URL = 'template.jpg';                // ваш фоновый рисунок
+        const FONT_URL = 'gilroy-regular-italic.ttf';    // файл шрифта
 
-            // Позиционирование текста (коэффициенты от 0 до 1)
-            const NAME_X_FACTOR = 0.155;       // смещение имени по X
-            const NAME_Y_FACTOR = 0.519;       // смещение имени по Y
-            const DATE_X_FACTOR = 0.2925;        // смещение даты по X
-            const DATE_Y_FACTOR = 0.142;       // смещение даты по Y
+        // Позиционирование текста (коэффициенты от 0 до 1)
+        const NAME_X_FACTOR = 0.155;       // смещение имени по X
+        const NAME_Y_FACTOR = 0.519;       // смещение имени по Y
+        const DATE_X_FACTOR = 0.2925;      // смещение даты по X
+        const DATE_Y_FACTOR = 0.142;       // смещение даты по Y
 
-            // Размер шрифта
-            const NAME_FONT_SIZE = 45;
-            const DATE_FONT_SIZE = 28;
+        // Размер шрифта
+        const NAME_FONT_SIZE = 45;
+        const DATE_FONT_SIZE = 28;
 
-            // Цвет имени (RGB, каждый канал от 0 до 1)
-            const NAME_TEXT_COLOR = { r: 37/255, g: 37/255, b: 39/255 };
-            // Цвет даты (RGB, каждый канал от 0 до 1)
-            const DATE_TEXT_COLOR = { r: 51/255, g: 52/255, b: 56/255 }; 
-            // ----------------------------------------------
+        // Цвет имени (RGB, каждый канал от 0 до 1)
+        const NAME_TEXT_COLOR = { r: 37/255, g: 37/255, b: 39/255 };
+        // Цвет даты (RGB, каждый канал от 0 до 1)
+        const DATE_TEXT_COLOR = { r: 51/255, g: 52/255, b: 56/255 };
+        // ---------------------------------------------------------
 
-            // Устанавливаем сегодняшнюю дату в поле date (формат YYYY-MM-DD)
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            const todayFormatted = `${yyyy}-${mm}-${dd}`;
-            document.getElementById('date').value = todayFormatted;
+        // Устанавливаем сегодняшнюю дату в поле date (формат YYYY-MM-DD)
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayFormatted = `${yyyy}-${mm}-${dd}`;
+        document.getElementById('date').value = todayFormatted;
 
-            let imageBytes, fontBytes;
+        let imageBytes, fontBytes;
 
-            try {
-                const imgResp = await fetch(IMAGE_URL);
-                if (!imgResp.ok) throw new Error(`Не удалось загрузить изображение: ${IMAGE_URL}`);
-                imageBytes = await imgResp.arrayBuffer();
+        // Загрузка ресурсов
+        try {
+            const imgResp = await fetch(IMAGE_URL);
+            if (!imgResp.ok) throw new Error(`Не удалось загрузить изображение: ${IMAGE_URL}`);
+            imageBytes = await imgResp.arrayBuffer();
 
-                const fontResp = await fetch(FONT_URL);
-                if (!fontResp.ok) throw new Error(`Не удалось загрузить шрифт: ${FONT_URL}`);
-                fontBytes = await fontResp.arrayBuffer();
-                document.getElementById('info').innerText = '✓ Шаблон и шрифт загружены.';
-            } catch (err) {
-                document.getElementById('error').innerText = err.message;
-                console.error(err);
+            const fontResp = await fetch(FONT_URL);
+            if (!fontResp.ok) throw new Error(`Не удалось загрузить шрифт: ${FONT_URL}`);
+            fontBytes = await fontResp.arrayBuffer();
+            document.getElementById('info').innerHTML = '✅ Шаблон і шрифт завантажено.';
+        } catch (err) {
+            document.getElementById('error').innerText = err.message;
+            console.error(err);
+            return;
+        }
+
+        // Функція транслитерації з підтримкою українських літер
+        function transliterateUkrainian(name) {
+            const map = {
+                'а': 'a', 'б': 'b', 'в': 'v', 'г': 'h', 'ґ': 'g',
+                'д': 'd', 'е': 'e', 'є': 'ye', 'ж': 'zh', 'з': 'z',
+                'и': 'y', 'і': 'i', 'ї': 'yi', 'й': 'y', 'к': 'k',
+                'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p',
+                'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f',
+                'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+                'ь': '', 'ю': 'yu', 'я': 'ya',
+                ' ': '_'
+            };
+            let lower = name.toLowerCase();
+            let result = '';
+            for (let c of lower) {
+                result += map[c] || (/[a-z0-9]/i.test(c) ? c : '');
+            }
+            return result;
+        }
+
+        // Преобразование даты из формата YYYY-MM-DD в формат DD.MM.YYYY для отображения на сертификате
+        function formatDateForCertificate(dateStr) {
+            if (!dateStr) return new Date().toLocaleDateString('uk-UA');
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}.${parts[1]}.${parts[0]}`;
+            }
+            return dateStr;
+        }
+
+        // Капіталізація кожного слова (Ім'я Прізвище)
+        function capitalizeWords(str) {
+            return str.split(' ').map(word => {
+                if (word.length === 0) return word;
+                return word[0].toUpperCase() + word.slice(1).toLowerCase();
+            }).join(' ');
+        }
+
+        document.getElementById('gen').onclick = async () => {
+            let rawName = document.getElementById('name').value.trim();
+            let rawDate = document.getElementById('date').value;
+
+            if (!rawName) {
+                document.getElementById('error').innerText = 'Будь ласка, введіть ПІБ студента';
                 return;
             }
+            document.getElementById('error').innerText = '';
+            document.getElementById('info').innerHTML = '⏳ Генерація PDF...';
 
-            // Функция транслитерации (русские буквы -> латиница)
-            function transliterate(name) {
-                const map = {
-                    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
-                    'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-                    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-                    'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
-                    'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
-                    ' ': '_'
-                };
-                return name.toLowerCase().split('').map(c => map[c] || (/[a-z0-9]/i.test(c) ? c : '')).join('');
-            }
+            try {
+                // Приводимо ім'я до формату "Ім'я Прізвище" (з великої літери кожне слово)
+                const formattedName = capitalizeWords(rawName);
 
-            // Преобразование даты из формата YYYY-MM-DD в формат DD.MM.YYYY для отображения на сертификате
-            function formatDateForCertificate(dateStr) {
-                if (!dateStr) return new Date().toLocaleDateString('ru-RU');
-                const parts = dateStr.split('-');
-                if (parts.length === 3) {
-                    return `${parts[2]}.${parts[1]}.${parts[0]}`;
-                }
-                return dateStr;
-            }
+                const pdfDoc = await PDFDocument.create();
+                pdfDoc.registerFontkit(fontkit);
 
-            document.getElementById('gen').onclick = async () => {
-                const studentName = document.getElementById('name').value.trim();
-                let rawDate = document.getElementById('date').value;
-                if (!studentName) {
-                    document.getElementById('error').innerText = 'Введите имя студента';
-                    return;
-                }
-                document.getElementById('error').innerText = '';
-                document.getElementById('info').innerText = 'Генерация PDF...';
-
+                let image;
                 try {
-                    const pdfDoc = await PDFDocument.create();
-                    pdfDoc.registerFontkit(fontkit);
-
-                    let image;
-                    try {
-                        image = await pdfDoc.embedPng(imageBytes);
-                    } catch (e) {
-                        image = await pdfDoc.embedJpg(imageBytes);
-                    }
-
-                    // Встраиваем кастомный шрифт, если не получится – используем стандартный Helvetica
-                    let customFont;
-                    try {
-                        customFont = await pdfDoc.embedFont(fontBytes);
-                    } catch (e) {
-                        console.warn('Не удалось загрузить кастомный шрифт, используем Helvetica', e);
-                        customFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-                    }
-
-                    const page = pdfDoc.addPage([image.width, image.height]);
-                    page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
-
-                    // Позиции
-                    const nameX = image.width * NAME_X_FACTOR;
-                    const nameY = image.height * NAME_Y_FACTOR;
-                    const dateX = image.width * DATE_X_FACTOR;
-                    const dateY = image.height * DATE_Y_FACTOR;
-
-                    // Имя
-                    const nameWidth = customFont.widthOfTextAtSize(studentName, NAME_FONT_SIZE);
-                    page.drawText(studentName, {
-                        x: nameX - nameWidth / 2,
-                        y: nameY,
-                        size: NAME_FONT_SIZE,
-                        font: customFont,
-                        color: rgb(NAME_TEXT_COLOR.r, NAME_TEXT_COLOR.g, NAME_TEXT_COLOR.b),
-                    });
-
-                    // Дата
-                    let displayDate = rawDate ? formatDateForCertificate(rawDate) : formatDateForCertificate(todayFormatted);
-                    const dateWidth = customFont.widthOfTextAtSize(displayDate, DATE_FONT_SIZE);
-                    page.drawText(displayDate, {
-                        x: dateX - dateWidth / 2,
-                        y: dateY,
-                        size: DATE_FONT_SIZE,
-                        font: customFont,
-                        color: rgb(DATE_TEXT_COLOR.r, DATE_TEXT_COLOR.g, DATE_TEXT_COLOR.b),
-                    });
-
-                    const pdfBytes = await pdfDoc.save();
-                    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    
-                    const latinName = transliterate(studentName).replace(/[^a-z0-9_]/gi, '_');
-                    const fileName = `${latinName}_Сертификат.pdf`;
-                    link.download = fileName;
-                    
-                    link.click();
-                    URL.revokeObjectURL(link.href);
-                    document.getElementById('info').innerText = `✓ Сертификат "${fileName}" готов.`;
-                } catch (err) {
-                    document.getElementById('error').innerText = 'Ошибка при создании PDF: ' + err.message;
-                    console.error(err);
+                    image = await pdfDoc.embedPng(imageBytes);
+                } catch (e) {
+                    image = await pdfDoc.embedJpg(imageBytes);
                 }
-            };
-        })();
-    </script>
+
+                let customFont;
+                try {
+                    customFont = await pdfDoc.embedFont(fontBytes);
+                } catch (e) {
+                    console.warn('Не удалось загрузить кастомный шрифт, используем Helvetica', e);
+                    customFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+                }
+
+                const page = pdfDoc.addPage([image.width, image.height]);
+                page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+
+                // Позиции (ваши коэффициенты)
+                const nameX = image.width * NAME_X_FACTOR;
+                const nameY = image.height * NAME_Y_FACTOR;
+                const dateX = image.width * DATE_X_FACTOR;
+                const dateY = image.height * DATE_Y_FACTOR;
+
+                // Имя (с центрированием)
+                const nameWidth = customFont.widthOfTextAtSize(formattedName, NAME_FONT_SIZE);
+                page.drawText(formattedName, {
+                    x: nameX - nameWidth / 2,
+                    y: nameY,
+                    size: NAME_FONT_SIZE,
+                    font: customFont,
+                    color: rgb(NAME_TEXT_COLOR.r, NAME_TEXT_COLOR.g, NAME_TEXT_COLOR.b),
+                });
+
+                // Дата (с центрированием)
+                let displayDate = rawDate ? formatDateForCertificate(rawDate) : formatDateForCertificate(todayFormatted);
+                const dateWidth = customFont.widthOfTextAtSize(displayDate, DATE_FONT_SIZE);
+                page.drawText(displayDate, {
+                    x: dateX - dateWidth / 2,
+                    y: dateY,
+                    size: DATE_FONT_SIZE,
+                    font: customFont,
+                    color: rgb(DATE_TEXT_COLOR.r, DATE_TEXT_COLOR.g, DATE_TEXT_COLOR.b),
+                });
+
+                const pdfBytes = await pdfDoc.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+
+                // Транслітерація та формування імені файлу: Ім'я_Прізвище_Certificate.pdf
+                const latinName = transliterateUkrainian(formattedName).replace(/[^a-z0-9_]/gi, '_');
+                // Робимо першу літеру кожного слова великою для краси
+                const capitalizedLatin = latinName.split('_').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('_');
+                const fileName = `${capitalizedLatin}_Certificate.pdf`;
+                link.download = fileName;
+
+                link.click();
+                URL.revokeObjectURL(link.href);
+                document.getElementById('info').innerHTML = `✅ Сертифікат "${fileName}" збережено.`;
+            } catch (err) {
+                document.getElementById('error').innerText = 'Помилка створення PDF: ' + err.message;
+                console.error(err);
+            }
+        };
+    })();
+</script>
 </body>
 </html>
