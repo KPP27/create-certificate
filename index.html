@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>Сертификат – Gilroy Italic</title>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <!-- Подключаем fontkit для поддержки кастомных TTF/OTF шрифтов -->
     <script src="https://unpkg.com/@pdf-lib/fontkit@1.0.0/dist/fontkit.umd.min.js"></script>
     <style>
         body { font-family: sans-serif; padding: 2rem; max-width: 500px; margin: 0 auto; }
@@ -12,36 +11,45 @@
         button { background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; }
         button:hover { background: #2563eb; }
         .error { color: red; margin-top: 10px; }
+        .info { color: #2563eb; margin-top: 10px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
-    <h2>Генератор сертификатов</h2>
+    <h2>Генератор сертификатов (шрифт Gilroy Italic)</h2>
     <label>ФИО студента:</label>
     <input type="text" id="name" placeholder="Иванов Иван">
     <label>Дата выдачи:</label>
     <input type="text" id="date" placeholder="25.04.2026">
-    <button id="gen">Скачать PDF (Gilroy Italic)</button>
+    <button id="gen">Скачать PDF</button>
     <div id="error" class="error"></div>
+    <div id="info" class="info"></div>
 
     <script>
         (async function() {
             const { PDFDocument, rgb } = PDFLib;
 
-            // --- НАСТРОЙКИ (подберите под свой макет) ---
-            const IMAGE_URL = 'template.jpg';                // ваш JPG-шаблон
-            const FONT_URL = 'gilroy-regular-italic.ttf';    // имя вашего TTF-шрифта
-            // Позиции текста (коэффициенты от 0 до 1)
-            const NAME_X_FACTOR = 0.5;      // 0.5 = по центру по горизонтали
-            const NAME_Y_FACTOR = 0.45;     // 0.45 = 45% высоты от верхнего края
-            const DATE_X_FACTOR = 0.5;
-            const DATE_Y_FACTOR = 0.6;
-            const NAME_FONT_SIZE = 42;      // размер шрифта для имени
-            const DATE_FONT_SIZE = 28;      // размер шрифта для даты
-            const TEXT_COLOR = { r: 0, g: 0, b: 0 }; // чёрный
-            // --------------------------------------------
+            // ---------- НАСТРОЙКИ (меняйте здесь) ----------
+            const IMAGE_URL = 'template.jpg';                // ваш фоновый рисунок
+            const FONT_URL = 'gilroy-regular-italic.ttf';    // файл шрифта
 
-            // Загружаем изображение и шрифт
+            // === ПОЗИЦИОНИРОВАНИЕ ТЕКСТА (коэффициенты от 0 до 1) ===
+            // 0 = левый/верхний край, 0.5 = центр, 1 = правый/нижний край
+            const NAME_X_FACTOR = 0.5;       // смещение имени по X (0..1). 0.5 = по центру
+            const NAME_Y_FACTOR = 0.45;      // смещение имени по Y. 0.45 = чуть выше середины
+            const DATE_X_FACTOR = 0.5;       // смещение даты по X
+            const DATE_Y_FACTOR = 0.6;       // смещение даты по Y (ниже имени)
+
+            // === РАЗМЕР ШРИФТА ===
+            const NAME_FONT_SIZE = 42;        // размер шрифта для имени (чем больше, тем крупнее)
+            const DATE_FONT_SIZE = 28;        // размер шрифта для даты
+
+            // === ЦВЕТ ТЕКСТА (RGB от 0 до 1) ===
+            const TEXT_COLOR = { r: 0, g: 0, b: 0 }; // чёрный
+
+            // =================================================
+
             let imageBytes, fontBytes;
+
             try {
                 const imgResp = await fetch(IMAGE_URL);
                 if (!imgResp.ok) throw new Error(`Не удалось загрузить изображение: ${IMAGE_URL}`);
@@ -50,10 +58,24 @@
                 const fontResp = await fetch(FONT_URL);
                 if (!fontResp.ok) throw new Error(`Не удалось загрузить шрифт: ${FONT_URL}`);
                 fontBytes = await fontResp.arrayBuffer();
+                document.getElementById('info').innerText = '✓ Шаблон и шрифт загружены.';
             } catch (err) {
                 document.getElementById('error').innerText = err.message;
                 console.error(err);
                 return;
+            }
+
+            // Функция простой транслитерации (русские буквы -> латиница)
+            function transliterate(name) {
+                const map = {
+                    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+                    'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+                    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+                    'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+                    'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+                    ' ': '_', '\\w':''
+                };
+                return name.toLowerCase().split('').map(c => map[c] || (/[a-z0-9]/i.test(c) ? c : '')).join('');
             }
 
             document.getElementById('gen').onclick = async () => {
@@ -64,68 +86,70 @@
                     return;
                 }
                 document.getElementById('error').innerText = '';
+                document.getElementById('info').innerText = 'Генерация PDF...';
 
-                // Создаём PDF
-                const pdfDoc = await PDFDocument.create();
-                
-                // Регистрируем fontkit для работы с кастомными шрифтами
-                pdfDoc.registerFontkit(fontkit);
-
-                // Встраиваем изображение
-                let image;
                 try {
-                    image = await pdfDoc.embedPng(imageBytes);
-                } catch (e) {
-                    image = await pdfDoc.embedJpg(imageBytes);
+                    const pdfDoc = await PDFDocument.create();
+                    pdfDoc.registerFontkit(fontkit);
+
+                    // Встраиваем изображение
+                    let image;
+                    try {
+                        image = await pdfDoc.embedPng(imageBytes);
+                    } catch (e) {
+                        image = await pdfDoc.embedJpg(imageBytes);
+                    }
+
+                    // Встраиваем шрифт
+                    const customFont = await pdfDoc.embedFont(fontBytes);
+
+                    const page = pdfDoc.addPage([image.width, image.height]);
+                    page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
+
+                    // Координаты из настроек
+                    const nameX = image.width * NAME_X_FACTOR;
+                    const nameY = image.height * NAME_Y_FACTOR;
+                    const dateX = image.width * DATE_X_FACTOR;
+                    const dateY = image.height * DATE_Y_FACTOR;
+
+                    // Имя – центрирование по X
+                    const nameWidth = customFont.widthOfTextAtSize(studentName, NAME_FONT_SIZE);
+                    page.drawText(studentName, {
+                        x: nameX - nameWidth / 2,
+                        y: nameY,
+                        size: NAME_FONT_SIZE,
+                        font: customFont,
+                        color: rgb(TEXT_COLOR.r, TEXT_COLOR.g, TEXT_COLOR.b),
+                    });
+
+                    // Дата – центрирование по X
+                    const dateText = issueDate || new Date().toLocaleDateString('ru-RU');
+                    const dateWidth = customFont.widthOfTextAtSize(dateText, DATE_FONT_SIZE);
+                    page.drawText(dateText, {
+                        x: dateX - dateWidth / 2,
+                        y: dateY,
+                        size: DATE_FONT_SIZE,
+                        font: customFont,
+                        color: rgb(TEXT_COLOR.r, TEXT_COLOR.g, TEXT_COLOR.b),
+                    });
+
+                    const pdfBytes = await pdfDoc.save();
+                    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    
+                    // Формируем имя файла: транслитерация + "Сертификат.pdf"
+                    const latinName = transliterate(studentName).replace(/[^a-z0-9_]/gi, '_');
+                    const fileName = `${latinName}_Сертификат.pdf`;
+                    link.download = fileName;
+                    
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                    document.getElementById('info').innerText = `✓ Сертификат "${fileName}" готов.`;
+                } catch (err) {
+                    document.getElementById('error').innerText = 'Ошибка при создании PDF: ' + err.message;
+                    console.error(err);
                 }
-
-                // Встраиваем ваш TTF-шрифт
-                let customFont;
-                try {
-                    customFont = await pdfDoc.embedFont(fontBytes);
-                } catch (e) {
-                    console.warn('Не удалось встроить шрифт, используем стандартный Helvetica', e);
-                    customFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-                }
-
-                const page = pdfDoc.addPage([image.width, image.height]);
-                page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
-
-                // Вычисляем координаты
-                const nameX = image.width * NAME_X_FACTOR;
-                const nameY = image.height * NAME_Y_FACTOR;
-                const dateX = image.width * DATE_X_FACTOR;
-                const dateY = image.height * DATE_Y_FACTOR;
-
-                // Рисуем имя (с центрированием)
-                const nameWidth = customFont.widthOfTextAtSize(studentName, NAME_FONT_SIZE);
-                page.drawText(studentName, {
-                    x: nameX - nameWidth / 2,
-                    y: nameY,
-                    size: NAME_FONT_SIZE,
-                    font: customFont,
-                    color: rgb(TEXT_COLOR.r, TEXT_COLOR.g, TEXT_COLOR.b),
-                });
-
-                // Рисуем дату (с центрированием)
-                const dateText = issueDate || new Date().toLocaleDateString('ru-RU');
-                const dateWidth = customFont.widthOfTextAtSize(dateText, DATE_FONT_SIZE);
-                page.drawText(dateText, {
-                    x: dateX - dateWidth / 2,
-                    y: dateY,
-                    size: DATE_FONT_SIZE,
-                    font: customFont,
-                    color: rgb(TEXT_COLOR.r, TEXT_COLOR.g, TEXT_COLOR.b),
-                });
-
-                // Сохраняем и скачиваем PDF
-                const pdfBytes = await pdfDoc.save();
-                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `${studentName.replace(/[^a-zа-яё\s]/gi, '')}_certificate.pdf`;
-                link.click();
-                URL.revokeObjectURL(link.href);
             };
         })();
     </script>
