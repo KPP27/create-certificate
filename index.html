@@ -64,6 +64,7 @@
             letter-spacing: 0.3px;
         }
 
+        /* Общие стили для всех полей ввода */
         input, button {
             width: 100%;
             padding: 12px 16px;
@@ -72,10 +73,38 @@
             transition: all 0.2s ease;
         }
 
+        /* Стили для текстового поля и календаря */
         input {
             border: 1px solid #cbd5e1;
             background: white;
             outline: none;
+            font-family: inherit;
+        }
+
+        /* Стилизация календаря (поле выбора даты) */
+        input[type="date"] {
+            position: relative;
+            color: #0f172a;
+            cursor: pointer;
+        }
+
+        /* Кастомная иконка календаря (симпатичная, без лишних деталей) */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="%233b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>') no-repeat center;
+            background-size: 18px;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
+
+        /* Для Firefox, Edge и других браузеров */
+        input[type="date"] {
+            color-scheme: light;
         }
 
         input:focus {
@@ -152,27 +181,22 @@
     (async function() {
         const { PDFDocument, rgb, StandardFonts } = PDFLib;
 
-        // ---------- НАСТРОЙКИ (сохранены ваши значения) ----------
-        const IMAGE_URL = 'template.jpg';                // ваш фоновый рисунок
-        const FONT_URL = 'gilroy-regular-italic.ttf';    // файл шрифта
+        // ---------- НАСТРОЙКИ (ваши значения) ----------
+        const IMAGE_URL = 'template.jpg';
+        const FONT_URL = 'gilroy-regular-italic.ttf';
 
-        // Позиционирование текста (коэффициенты от 0 до 1)
-        const NAME_X_FACTOR = 0.155;       // смещение имени по X
-        const NAME_Y_FACTOR = 0.519;       // смещение имени по Y
-        const DATE_X_FACTOR = 0.2925;      // смещение даты по X
-        const DATE_Y_FACTOR = 0.142;       // смещение даты по Y
+        const NAME_X_FACTOR = 0.155;
+        const NAME_Y_FACTOR = 0.519;
+        const DATE_X_FACTOR = 0.2925;
+        const DATE_Y_FACTOR = 0.142;
 
-        // Размер шрифта
         const NAME_FONT_SIZE = 45;
         const DATE_FONT_SIZE = 28;
 
-        // Цвет имени (RGB, каждый канал от 0 до 1)
         const NAME_TEXT_COLOR = { r: 37/255, g: 37/255, b: 39/255 };
-        // Цвет даты (RGB, каждый канал от 0 до 1)
         const DATE_TEXT_COLOR = { r: 51/255, g: 52/255, b: 56/255 };
-        // ---------------------------------------------------------
+        // ----------------------------------------------
 
-        // Устанавливаем сегодняшнюю дату в поле date (формат YYYY-MM-DD)
         const today = new Date();
         const yyyy = today.getFullYear();
         const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -182,7 +206,6 @@
 
         let imageBytes, fontBytes;
 
-        // Загрузка ресурсов
         try {
             const imgResp = await fetch(IMAGE_URL);
             if (!imgResp.ok) throw new Error(`Не удалось загрузить изображение: ${IMAGE_URL}`);
@@ -198,7 +221,7 @@
             return;
         }
 
-        // Функція транслитерації з підтримкою українських літер
+        // Функція транслитерації українською
         function transliterateUkrainian(name) {
             const map = {
                 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'h', 'ґ': 'g',
@@ -218,7 +241,6 @@
             return result;
         }
 
-        // Преобразование даты из формата YYYY-MM-DD в формат DD.MM.YYYY для отображения на сертификате
         function formatDateForCertificate(dateStr) {
             if (!dateStr) return new Date().toLocaleDateString('uk-UA');
             const parts = dateStr.split('-');
@@ -228,7 +250,6 @@
             return dateStr;
         }
 
-        // Капіталізація кожного слова (Ім'я Прізвище)
         function capitalizeWords(str) {
             return str.split(' ').map(word => {
                 if (word.length === 0) return word;
@@ -248,7 +269,6 @@
             document.getElementById('info').innerHTML = '⏳ Генерація PDF...';
 
             try {
-                // Приводимо ім'я до формату "Ім'я Прізвище" (з великої літери кожне слово)
                 const formattedName = capitalizeWords(rawName);
 
                 const pdfDoc = await PDFDocument.create();
@@ -265,20 +285,18 @@
                 try {
                     customFont = await pdfDoc.embedFont(fontBytes);
                 } catch (e) {
-                    console.warn('Не удалось загрузить кастомный шрифт, используем Helvetica', e);
+                    console.warn('Не вдалося завантажити шрифт, використовуємо Helvetica', e);
                     customFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
                 }
 
                 const page = pdfDoc.addPage([image.width, image.height]);
                 page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
 
-                // Позиции (ваши коэффициенты)
                 const nameX = image.width * NAME_X_FACTOR;
                 const nameY = image.height * NAME_Y_FACTOR;
                 const dateX = image.width * DATE_X_FACTOR;
                 const dateY = image.height * DATE_Y_FACTOR;
 
-                // Имя (с центрированием)
                 const nameWidth = customFont.widthOfTextAtSize(formattedName, NAME_FONT_SIZE);
                 page.drawText(formattedName, {
                     x: nameX - nameWidth / 2,
@@ -288,7 +306,6 @@
                     color: rgb(NAME_TEXT_COLOR.r, NAME_TEXT_COLOR.g, NAME_TEXT_COLOR.b),
                 });
 
-                // Дата (с центрированием)
                 let displayDate = rawDate ? formatDateForCertificate(rawDate) : formatDateForCertificate(todayFormatted);
                 const dateWidth = customFont.widthOfTextAtSize(displayDate, DATE_FONT_SIZE);
                 page.drawText(displayDate, {
@@ -304,9 +321,7 @@
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
 
-                // Транслітерація та формування імені файлу: Ім'я_Прізвище_Certificate.pdf
                 const latinName = transliterateUkrainian(formattedName).replace(/[^a-z0-9_]/gi, '_');
-                // Робимо першу літеру кожного слова великою для краси
                 const capitalizedLatin = latinName.split('_').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('_');
                 const fileName = `${capitalizedLatin}_Certificate.pdf`;
                 link.download = fileName;
