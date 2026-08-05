@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Сертифікат – Gilroy Italic</title>
+    <title>Генератор сертифікатів</title>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://unpkg.com/@pdf-lib/fontkit@1.0.0/dist/fontkit.umd.min.js"></script>
     <style>
@@ -55,6 +55,43 @@
             font-size: 0.95rem;
         }
 
+        .course-selector {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .course-selector {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .course-selector label:hover {
+            background: rgba(59,130,246,0.05);
+        }
+
+        .course-selector input[type="radio"] {
+            accent-color: #3b82f6;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .course-selector input[type="radio"]:checked + span {
+            font-weight: 600;
+            color: #2563eb;
+        }
+
+        .course-selector label:has(input:checked) {
+            border-color: #3b82f6;
+            background: rgba(59,130,246,0.08);
+        }
+
         label {
             font-weight: 600;
             display: block;
@@ -64,7 +101,6 @@
             letter-spacing: 0.3px;
         }
 
-        /* Общие стили для всех полей ввода */
         input, button {
             width: 100%;
             padding: 12px 16px;
@@ -73,7 +109,6 @@
             transition: all 0.2s ease;
         }
 
-        /* Стили для текстового поля и календаря */
         input {
             border: 1px solid #cbd5e1;
             background: white;
@@ -81,35 +116,14 @@
             font-family: inherit;
         }
 
-        /* Стилизация календаря (поле выбора даты) */
-        input[type="date"] {
-            position: relative;
-            color: #0f172a;
-            cursor: pointer;
-        }
-
-        /* Кастомная иконка календаря (симпатичная, без лишних деталей) */
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="%233b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>') no-repeat center;
-            background-size: 18px;
-            padding: 0;
-            margin: 0;
-            cursor: pointer;
-            opacity: 0.8;
-            transition: opacity 0.2s;
-        }
-        input[type="date"]::-webkit-calendar-picker-indicator:hover {
-            opacity: 1;
-        }
-
-        /* Для Firefox, Edge и других браузеров */
-        input[type="date"] {
-            color-scheme: light;
-        }
-
         input:focus {
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+
+        input[type="date"] {
+            color-scheme: light;
+            cursor: pointer;
         }
 
         button {
@@ -159,7 +173,19 @@
 <body>
 <div class="card">
     <h2>🎓 Генератор сертифікатів</h2>
-    <div class="sub">шрифт Gilroy Italic • оберіть дату</div>
+    <div class="sub">Оберіть курс та заповніть дані</div>
+
+    <!-- Вибір курсу -->
+    <div class="course-selector">
+        <label>
+            <input type="radio" name="course" value="installer" checked>
+            <span>🛠️ Монтажник СЕС</span>
+        </label>
+        <label>
+            <input type="radio" name="course" value="designer">
+            <span>📐 Проєктувальник СЕС</span>
+        </label>
+    </div>
 
     <label>📛 ПІБ студента / студентки</label>
     <input type="text" id="name" placeholder="Іваненко Іван" autocomplete="off">
@@ -169,7 +195,7 @@
 
     <button id="gen">✨ Завантажити PDF-сертифікат</button>
 
-    <div id="info" class="info">✅ Шаблон і шрифт готові</div>
+    <div id="info" class="info">✅ Шаблони і шрифт готові</div>
     <div id="error" class="error"></div>
     <footer>
         PDF створюється у вашому браузері.<br>
@@ -181,47 +207,57 @@
     (async function() {
         const { PDFDocument, rgb, StandardFonts } = PDFLib;
 
-        // ---------- НАСТРОЙКИ (ваши значения) ----------
-        const IMAGE_URL = 'template.jpg';
+        // ---------- НАЛАШТУВАННЯ ДЛЯ КОЖНОГО КУРСУ ----------
+        const COURSES = {
+            installer: {
+                label: 'Монтажник СЕС',
+                image: 'template_installer.jpg',
+                nameX: 0.155,
+                nameY: 0.519,
+                dateX: 0.2925,
+                dateY: 0.142,
+                nameSize: 46,
+                dateSize: 29,
+                nameColor: { r: 37/255, g: 37/255, b: 39/255 },
+                dateColor: { r: 51/255, g: 52/255, b: 56/255 }
+            },
+            designer: {
+                label: 'Проєктувальник СЕС',
+                image: 'template_designer.jpg',
+                nameX: 0.155,
+                nameY: 0.519,
+                dateX: 0.2925,
+                dateY: 0.142,
+                nameSize: 46,
+                dateSize: 29,
+                nameColor: { r: 37/255, g: 37/255, b: 39/255 },
+                dateColor: { r: 51/255, g: 52/255, b: 56/255 }
+            }
+        };
+
         const FONT_URL = 'gilroy-regular-italic.ttf';
 
-        const NAME_X_FACTOR = 0.155;
-        const NAME_Y_FACTOR = 0.519;
-        const DATE_X_FACTOR = 0.2925;
-        const DATE_Y_FACTOR = 0.142;
-
-        const NAME_FONT_SIZE = 46;
-        const DATE_FONT_SIZE = 29;
-
-        const NAME_TEXT_COLOR = { r: 37/255, g: 37/255, b: 39/255 };
-        const DATE_TEXT_COLOR = { r: 51/255, g: 52/255, b: 56/255 };
-        // ----------------------------------------------
-
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        const todayFormatted = `${yyyy}-${mm}-${dd}`;
-        document.getElementById('date').value = todayFormatted;
-
-        let imageBytes, fontBytes;
-
+        // Завантаження шрифту (один раз)
+        let fontBytes = null;
         try {
-            const imgResp = await fetch(IMAGE_URL);
-            if (!imgResp.ok) throw new Error(`Не удалось загрузить изображение: ${IMAGE_URL}`);
-            imageBytes = await imgResp.arrayBuffer();
-
             const fontResp = await fetch(FONT_URL);
-            if (!fontResp.ok) throw new Error(`Не удалось загрузить шрифт: ${FONT_URL}`);
+            if (!fontResp.ok) throw new Error(`Шрифт не завантажено: ${FONT_URL}`);
             fontBytes = await fontResp.arrayBuffer();
-            document.getElementById('info').innerHTML = '✅ Шаблон і шрифт завантажено.';
+            document.getElementById('info').innerHTML = '✅ Шрифт завантажено.';
         } catch (err) {
             document.getElementById('error').innerText = err.message;
             console.error(err);
             return;
         }
 
-        // Функція транслитерації українською
+        // Установка сегодняшней даты
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        document.getElementById('date').value = `${yyyy}-${mm}-${dd}`;
+
+        // ---------- Допоміжні функції ----------
         function transliterateUkrainian(name) {
             const map = {
                 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'h', 'ґ': 'g',
@@ -257,9 +293,21 @@
             }).join(' ');
         }
 
+        // ---------- Генерація PDF ----------
         document.getElementById('gen').onclick = async () => {
-            let rawName = document.getElementById('name').value.trim();
-            let rawDate = document.getElementById('date').value;
+            const rawName = document.getElementById('name').value.trim();
+            const rawDate = document.getElementById('date').value;
+            const courseEl = document.querySelector('input[name="course"]:checked');
+            if (!courseEl) {
+                document.getElementById('error').innerText = 'Оберіть курс';
+                return;
+            }
+            const courseKey = courseEl.value;
+            const course = COURSES[courseKey];
+            if (!course) {
+                document.getElementById('error').innerText = 'Невідомий курс';
+                return;
+            }
 
             if (!rawName) {
                 document.getElementById('error').innerText = 'Будь ласка, введіть ПІБ студента';
@@ -270,6 +318,11 @@
 
             try {
                 const formattedName = capitalizeWords(rawName);
+
+                // Завантажуємо зображення для вибраного курсу
+                const imgResp = await fetch(course.image);
+                if (!imgResp.ok) throw new Error(`Не вдалося завантажити шаблон: ${course.image}`);
+                const imageBytes = await imgResp.arrayBuffer();
 
                 const pdfDoc = await PDFDocument.create();
                 pdfDoc.registerFontkit(fontkit);
@@ -292,28 +345,31 @@
                 const page = pdfDoc.addPage([image.width, image.height]);
                 page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
 
-                const nameX = image.width * NAME_X_FACTOR;
-                const nameY = image.height * NAME_Y_FACTOR;
-                const dateX = image.width * DATE_X_FACTOR;
-                const dateY = image.height * DATE_Y_FACTOR;
+                // Координати з налаштувань курсу
+                const nameX = image.width * course.nameX;
+                const nameY = image.height * course.nameY;
+                const dateX = image.width * course.dateX;
+                const dateY = image.height * course.dateY;
 
-                const nameWidth = customFont.widthOfTextAtSize(formattedName, NAME_FONT_SIZE);
+                // Ім'я
+                const nameWidth = customFont.widthOfTextAtSize(formattedName, course.nameSize);
                 page.drawText(formattedName, {
                     x: nameX - nameWidth / 2,
                     y: nameY,
-                    size: NAME_FONT_SIZE,
+                    size: course.nameSize,
                     font: customFont,
-                    color: rgb(NAME_TEXT_COLOR.r, NAME_TEXT_COLOR.g, NAME_TEXT_COLOR.b),
+                    color: rgb(course.nameColor.r, course.nameColor.g, course.nameColor.b),
                 });
 
-                let displayDate = rawDate ? formatDateForCertificate(rawDate) : formatDateForCertificate(todayFormatted);
-                const dateWidth = customFont.widthOfTextAtSize(displayDate, DATE_FONT_SIZE);
+                // Дата
+                const displayDate = rawDate ? formatDateForCertificate(rawDate) : formatDateForCertificate(document.getElementById('date').value);
+                const dateWidth = customFont.widthOfTextAtSize(displayDate, course.dateSize);
                 page.drawText(displayDate, {
                     x: dateX - dateWidth / 2,
                     y: dateY,
-                    size: DATE_FONT_SIZE,
+                    size: course.dateSize,
                     font: customFont,
-                    color: rgb(DATE_TEXT_COLOR.r, DATE_TEXT_COLOR.g, DATE_TEXT_COLOR.b),
+                    color: rgb(course.dateColor.r, course.dateColor.g, course.dateColor.b),
                 });
 
                 const pdfBytes = await pdfDoc.save();
@@ -330,7 +386,7 @@
                 URL.revokeObjectURL(link.href);
                 document.getElementById('info').innerHTML = `✅ Сертифікат "${fileName}" збережено.`;
             } catch (err) {
-                document.getElementById('error').innerText = 'Помилка створення PDF: ' + err.message;
+                document.getElementById('error').innerText = 'Помилка: ' + err.message;
                 console.error(err);
             }
         };
