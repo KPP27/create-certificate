@@ -1,7 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="uk">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#2563eb">
     <title>Генератор сертифікатів</title>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://unpkg.com/@pdf-lib/fontkit@1.0.0/dist/fontkit.umd.min.js"></script>
@@ -16,10 +18,14 @@
             font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: max(16px, env(safe-area-inset-top))
+                     max(16px, env(safe-area-inset-right))
+                     max(16px, env(safe-area-inset-bottom))
+                     max(16px, env(safe-area-inset-left));
         }
 
         .card {
@@ -56,11 +62,22 @@
         }
 
         .course-selector {
-            display: flex;
-            gap: 20px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
             margin-bottom: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
+        }
+
+        .course-selector label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 52px;
+            margin: 0;
+            padding: 12px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 18px;
+            cursor: pointer;
         }
 
         .course-selector label:hover {
@@ -99,6 +116,7 @@
             font-size: 1rem;
             border-radius: 24px;
             transition: all 0.2s ease;
+            min-height: 48px;
         }
 
         input {
@@ -134,6 +152,20 @@
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
         }
 
+        button:disabled {
+            cursor: wait;
+            opacity: 0.72;
+            transform: none;
+        }
+
+        .action-hint {
+            margin-top: 10px;
+            color: #64748b;
+            text-align: center;
+            font-size: 0.78rem;
+            line-height: 1.4;
+        }
+
         .info {
             background: #f1f5f9;
             border-radius: 20px;
@@ -160,6 +192,60 @@
             border-top: 1px solid #e2e8f0;
             padding-top: 16px;
         }
+
+        @media (min-width: 640px) {
+            .course-selector {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                align-items: flex-start;
+            }
+
+            .card {
+                padding: 24px 18px;
+                border-radius: 24px;
+            }
+
+            h2 {
+                font-size: 1.55rem;
+            }
+
+            .sub {
+                margin-bottom: 22px;
+            }
+
+            label {
+                margin-top: 16px;
+            }
+
+            button {
+                margin-top: 22px;
+                padding: 14px 16px;
+            }
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .card:hover {
+                transform: translateY(-4px);
+            }
+        }
+
+        @media (hover: none), (pointer: coarse) {
+            .card:hover,
+            button:hover {
+                transform: none;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                scroll-behavior: auto !important;
+                transition: none !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -179,16 +265,17 @@
         </label>
     </div>
 
-    <label>📛 ПІБ студента / студентки</label>
-    <input type="text" id="name" placeholder="Іваненко Іван" autocomplete="off">
+    <label for="name">📛 ПІБ студента / студентки</label>
+    <input type="text" id="name" placeholder="Іваненко Іван" autocomplete="name" autocapitalize="words">
 
-    <label>📅 Дата видачі</label>
+    <label for="date">📅 Дата видачі</label>
     <input type="date" id="date">
 
-    <button id="gen">✨ Завантажити PDF + скопіювати привітання</button>
+    <button id="gen" type="button">✨ Завантажити PDF + скопіювати привітання</button>
+    <div id="actionHint" class="action-hint">PDF буде завантажено, а привітання — скопійовано автоматично.</div>
 
-    <div id="info" class="info">✅ Шаблони і шрифт готові</div>
-    <div id="error" class="error"></div>
+    <div id="info" class="info" role="status" aria-live="polite">✅ Шаблони і шрифт готові</div>
+    <div id="error" class="error" role="alert" aria-live="assertive"></div>
     <footer>
         PDF створюється у вашому браузері.<br>
         Дані не передаються на сервер.
@@ -284,6 +371,16 @@
         };
 
         const FONT_URL = 'gilroy-regular-italic.ttf';
+        const generateButton = document.getElementById('gen');
+        const infoElement = document.getElementById('info');
+        const errorElement = document.getElementById('error');
+        const actionHint = document.getElementById('actionHint');
+        const isAndroid = /Android/i.test(navigator.userAgent);
+
+        if (isAndroid && navigator.share) {
+            generateButton.innerHTML = '✨ Створити та надіслати сертифікат';
+            actionHint.innerText = 'PDF і текст привітання будуть підготовлені для Telegram, Viber або іншого застосунку.';
+        }
 
         // Завантаження шрифту (один раз)
         let fontBytes = null;
@@ -354,28 +451,61 @@
                 .replace(/\{\{date\}\}/g, date);
         }
 
+        function downloadPdf(blob, fileName) {
+            const link = document.createElement('a');
+            const objectUrl = URL.createObjectURL(blob);
+            link.href = objectUrl;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        }
+
+        async function copyToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch (clipError) {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.setAttribute('readonly', '');
+                textarea.style.position = 'fixed';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                const copied = document.execCommand('copy');
+                textarea.remove();
+                return copied;
+            }
+        }
+
         // ---------- Генерація PDF та копіювання повідомлення ----------
-        document.getElementById('gen').onclick = async () => {
+        generateButton.onclick = async () => {
             const rawName = document.getElementById('name').value.trim();
             const rawDate = document.getElementById('date').value;
             const courseEl = document.querySelector('input[name="course"]:checked');
             if (!courseEl) {
-                document.getElementById('error').innerText = 'Оберіть курс';
+                errorElement.innerText = 'Оберіть курс';
                 return;
             }
             const courseKey = courseEl.value;
             const course = COURSES[courseKey];
             if (!course) {
-                document.getElementById('error').innerText = 'Невідомий курс';
+                errorElement.innerText = 'Невідомий курс';
                 return;
             }
 
             if (!rawName) {
-                document.getElementById('error').innerText = 'Будь ласка, введіть ПІБ студента';
+                errorElement.innerText = 'Будь ласка, введіть ПІБ студента';
                 return;
             }
-            document.getElementById('error').innerText = '';
-            document.getElementById('info').innerHTML = '⏳ Генерація PDF та копіювання повідомлення...';
+            errorElement.innerText = '';
+            infoElement.innerHTML = isAndroid
+                ? '⏳ Створюємо сертифікат і готуємо привітання...'
+                : '⏳ Генерація PDF та копіювання повідомлення...';
+            generateButton.disabled = true;
+            generateButton.setAttribute('aria-busy', 'true');
 
             try {
                 const formattedName = capitalizeWords(rawName);
@@ -432,44 +562,61 @@
 
                 const pdfBytes = await pdfDoc.save();
                 const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
 
                 const latinName = transliterateUkrainian(formattedName).replace(/[^a-z0-9_]/gi, '_');
                 const capitalizedLatin = latinName.split('_').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('_');
                 const dateForFilename = displayDate.replace(/\./g, '-');
                 const fileName = `${capitalizedLatin}_${course.fileLabel}_${dateForFilename}.pdf`;
-                link.download = fileName;
 
-                link.click();
-                URL.revokeObjectURL(link.href);
-
-                // --- 2. Вибір випадкового повідомлення та копіювання ---
+                // --- 2. Вибір випадкового повідомлення ---
                 const messages = course.welcomeMessages || [];
                 const randomIndex = Math.floor(Math.random() * messages.length);
                 const messageTemplate = messages[randomIndex] || '';
                 const filledMessage = fillMessage(messageTemplate, formattedName, displayDate);
 
-                // Копіюємо в буфер обміну
-                try {
-                    await navigator.clipboard.writeText(filledMessage);
-                    document.getElementById('info').innerHTML = `✅ Сертифікат "${fileName}" збережено.<br>📋 Привітальне повідомлення (варіант ${randomIndex + 1}) скопійовано в буфер обміну.`;
-                } catch (clipError) {
-                    // Резервний метод копіювання
-                    const textarea = document.createElement('textarea');
-                    textarea.value = filledMessage;
-                    textarea.style.position = 'fixed';
-                    textarea.style.left = '-9999px';
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea);
-                    document.getElementById('info').innerHTML = `✅ Сертифікат "${fileName}" збережено.<br>📋 Привітальне повідомлення (варіант ${randomIndex + 1}) скопійовано (резервний метод).`;
+                // Копіюємо текст незалежно від того, чи використає його месенджер.
+                const copied = await copyToClipboard(filledMessage);
+                const pdfFile = new File([pdfBytes], fileName, { type: 'application/pdf' });
+                const canSharePdf = isAndroid &&
+                    typeof navigator.share === 'function' &&
+                    typeof navigator.canShare === 'function' &&
+                    navigator.canShare({ files: [pdfFile] });
+
+                if (canSharePdf) {
+                    try {
+                        await navigator.share({
+                            title: `Сертифікат — ${formattedName}`,
+                            text: filledMessage,
+                            files: [pdfFile]
+                        });
+                        infoElement.innerHTML = copied
+                            ? `✅ Сертифікат передано для надсилання.<br>📋 Привітання (варіант ${randomIndex + 1}) також скопійовано.`
+                            : `✅ Сертифікат передано для надсилання.<br>⚠️ Месенджер може не додати текст привітання.`;
+                    } catch (shareError) {
+                        if (shareError.name === 'AbortError') {
+                            infoElement.innerHTML = copied
+                                ? `ℹ️ Надсилання скасовано.<br>📋 Привітання (варіант ${randomIndex + 1}) залишилося в буфері обміну.`
+                                : 'ℹ️ Надсилання скасовано.';
+                        } else {
+                            downloadPdf(blob, fileName);
+                            infoElement.innerHTML = copied
+                                ? `✅ Сертифікат "${fileName}" завантажено.<br>📋 Привітання (варіант ${randomIndex + 1}) скопійовано.`
+                                : `✅ Сертифікат "${fileName}" завантажено.<br>⚠️ Не вдалося скопіювати привітання.`;
+                        }
+                    }
+                } else {
+                    downloadPdf(blob, fileName);
+                    infoElement.innerHTML = copied
+                        ? `✅ Сертифікат "${fileName}" завантажено.<br>📋 Привітання (варіант ${randomIndex + 1}) скопійовано.`
+                        : `✅ Сертифікат "${fileName}" завантажено.<br>⚠️ Не вдалося скопіювати привітання.`;
                 }
 
             } catch (err) {
-                document.getElementById('error').innerText = 'Помилка: ' + err.message;
+                errorElement.innerText = 'Помилка: ' + err.message;
                 console.error(err);
+            } finally {
+                generateButton.disabled = false;
+                generateButton.removeAttribute('aria-busy');
             }
         };
     })();
